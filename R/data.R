@@ -1,0 +1,76 @@
+#' Simulation results for each constraint
+#'
+#' Six different datasets containing the simulation results for each constraint.
+#' 
+#' @details 
+#' Possible constraints are listed below:
+#' \itemize{
+#'    \item \code{"SC"}: independence between all enzymes 
+#'    \item \code{"Comp"}: competition for resources 
+#'    \item \code{"RegPos"}: positive regulation
+#'    \item \code{"RegNeg"}: negative regulation 
+#'    \item \code{"CRPos"}: competition plus positive regulation 
+#'    \item \code{"CRNeg"}: competition plus negative regulation
+#' }
+#' 
+#' There is ten simulations by constraint.
+#' 
+#' Simulations differ by the initial concentrations (manually chosen), but initial concentrations are identical between constraints.
+#' 
+#' Chosen equilibrium for \code{tabP_e} and \code{tabP_r} are the theoretical equilibrium for constraints \code{"SC"}, \code{"Comp"} and \code{"RegPos"}, and the effective one for constraints \code{"RegNeg"}, \code{"CRPos"} and \code{"CRNeg"}.
+#' 
+#' These simulation results are exploited in Coton et al. (2021).
+#' 
+#' @usage data("data_sim_SC")
+#' @usage data("data_sim_Comp")
+#' @usage data("data_sim_RegPos")
+#' @usage data("data_sim_RegNeg")
+#' @usage data("data_sim_CRPos")
+#' @usage data("data_sim_CRNeg")
+#' 
+#'
+#' @format Each dataset is a list containing six elements:
+#' \describe{
+#'   \item{\code{$tabR}}{Dataframe of \code{nsim*npt} rows and (\code{3*n+4}) columns. Column \code{$sim} is the number of current simulation.
+#'    Each row corresponds to the state at each observation step (i.e. after \code{pasobs} mutations),
+#'    and columns are respectively concentrations (\code{E1} to \code{En}), kinetic parameters (\code{kin1} to \code{kin_n}), total concentration, total kinetic, flux, activities (\code{A1} to \code{An}), and simulation number (column \code{$sim})}
+#'    \item{\code{$tabP_e}}{Numeric matrix of \code{npt} rows and \code{n+1} columns, corresponding to relative concentrations at equilibrium (column 1 to \code{n}) at each observation step (in rows), and associated simulation number (column \code{$sim})}
+#'    \item{\code{$tabP_r}}{Same as \code{$tabP_e}, but for response coefficients}
+#'    \item{\code{$list_init}}{List of 3 elements, containing initial values of concentrations in \code{$E0}, kinetic parameters in \code{$kin0} and activities in \code{$A0} for each simulation. Each element is a numeric matrix of \code{nsim} rows and \code{n} columns}
+#'    \item{\code{$list_final}}{List of 3 elements, containing final values of concentrations in \code{$E_f}, kinetic parameters in \code{$kin_f} and activities in \code{$A_f} for each simulation. Each element is a numeric matrix of \code{nsim} rows and \code{n} columns}
+#'    \item{\code{$param}}{List of input parameters: \itemize{
+#'        \item \code{n}: number of enzymes,
+#'        \item \code{nsim}: number of simulation,
+#'        \item \code{E0}: matrix of initial concentrations, identical to \code{$list_init$E0},
+#'        \item \code{kin0}: matrix of initial kinetic parameters, identical to \code{$list_init$kin0},
+#'        \item \code{Keq}: numeric vector of constant equilibrium,
+#'        \item \code{beta}: matrix of co-regulation coefficients,
+#'        \item \code{B}: numeric vector of global co-regulation coefficients,
+#'        \item \code{correl}: character string indicating the constraint abbreviation,
+#'        \item \code{N}: population size,
+#'        \item \code{pasobs}: number of steps between two system observations,
+#'        \item \code{npt}: number of system observations,
+#'        \item \code{X}: parameter for flux computation,
+#'        \item \code{Etot0}: initial total concentration,
+#'        \item \code{pmutA}: probability for activity mutation,
+#'        \item other parameters are described in \code{simul.evol.enz.multiple}}}
+#' }
+#' 
+#' @source Function \code{\link{simul.evol.enz.multiple}} have been used to obtained these datasets. Input parameters are listed in \code{data_sim_xx$param} (where \code{xx} is the constraint abbreviation). \code{E0} have been randomly chosen. Seed have been set to 1 before the simulations for the first constraint.
+#'
+#' @references 
+#' Coton at al. (2021)
+#' 
+#' @name data_sim
+#' @aliases data_sim_SC
+#' @aliases data_sim_Comp
+#' @aliases data_sim_RegPos
+#' @aliases data_sim_RegNeg
+#' @aliases data_sim_CRPos
+#' @aliases data_sim_CRNeg
+"data_sim_SC"
+"data_sim_Comp"
+"data_sim_RegPos"
+"data_sim_RegNeg"
+"data_sim_CRPos"
+"data_sim_CRNeg"
