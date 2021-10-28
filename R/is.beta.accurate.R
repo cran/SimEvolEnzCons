@@ -42,6 +42,9 @@
 
 is.beta.accurate <- function(beta_fun, n_fun, correl_fun) {
   
+  #verif if available correlation
+  is.correl.authorized(correl_fun)
+  
   #value of beta in these cases is not important but normally equal to 0 for all enzyme, except in the diagonal which is 1
   # this writing avoid multiple test
   if (correl_fun=="SC"|correl_fun=="Comp") {

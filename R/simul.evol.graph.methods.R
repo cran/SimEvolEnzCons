@@ -16,6 +16,7 @@
 #' 
 #' Function \code{graph.simul.by.time.RNV} gives graphics of \emph{Range of Neutral Variation} (RNV) for each enzyme.
 #' 
+#' Function \code{graph.simul.group} gives graphics depending on time, colored by simulations, specifically for regulation groups.
 #'
 #' @details 
 #' \emph{If only one simulation may be represented, use preferably function \code{graph.simul.by.time.by.enz}.}
@@ -24,7 +25,7 @@
 #' Colors for enzymes correspond to their number plus one.
 #' 
 #' \bold{Function \code{graph.simul.by.time.by.sim}} gives graphs of flux, relative concentrations, absolute concentrations, total concentration, kinetic parameters and activities through time.
-#' In addition, if exists, gives also driving variable \eqn{\tau} in relation to time.
+#' In addition, if all enzymes are co-regulated, gives also driving variable \eqn{\tau} in relation to time.
 #' \emph{Lines are colored according to simulation.} There is one graph by enzyme if necessary.
 #' Dashed lines correspond to theoretical equilibrium, and dotted lines to effective equilibrium.
 #' Every graph follow same scheme:
@@ -38,7 +39,7 @@
 #' 
 #' 
 #' \bold{Function \code{graph.simul.by.time.by.enz}} gives graphs of flux, relative concentrations, absolute concentrations, total concentration, kinetic parameters, activities and response coefficients through time. 
-#' In addition, if exists, gives also driving variable \eqn{\tau} in relation to time and flux in relation to \eqn{\tau}.
+#' In addition, if all enzymes are co-regulated, gives also driving variable \eqn{\tau} in relation to time and flux in relation to \eqn{\tau}.
 #' \emph{Lines are colored according to enzyme.} There is one graph by simulation. An heading with parameters of current simulation can be added with \code{gr.sim.heading}
 #' Dashed lines correspond to theoretical equilibrium, and dotted lines to effective equilibrium.
 #' \enumerate{
@@ -72,6 +73,18 @@
 #'    \item flux with neutral zone bounds, in relation to time and in relation to enzyme concentrations of each enzyme (where data are ordered to facilitate view)
 #' }
 #' Lines are colored by enzymes. Bounds of RNV is colored depending on \code{col_RNV}.
+#' 
+#' 
+#' #' \bold{Function \code{graph.simul.group}} gives graphs of:
+#' \itemize{
+#'    \item intra-group relative concentrations \eqn{e_i^q}
+#'    \item inter-group relative concentrations \eqn{e^q}
+#'    \item total relative concentrations \eqn{e_i} (same as \code{gr.e.time} in \code{graoh.simul.by.time.by.sim})
+#'    \item absolute concentrations for a group \eqn{E^q}
+#'    \item absolute concentrations \eqn{E_i} (same as \code{gr.E.time} in \code{graoh.simul.by.time.by.sim})
+#'    \item driving variable of group \eqn{\tau^q}
+#' }
+#' Lines are colored by simulations. 
 #' 
 #' 
 #' \bold{Graphical parameters}
@@ -109,8 +122,11 @@
 #' 
 #' graph.simul.by.time.by.sim(data_sim_RegNeg,new.window=TRUE)
 #' graph.simul.by.time.by.enz(data_sim_RegNeg,new.window=TRUE,which.sim=c(1))
-#' graph.simul.others.by.sim(data_sim_RegNeg,new.window=TRUE)
+#' graph.simul.others.by.sim(data_sim_RegNeg,new.window=TRUE,env.curve=TRUE,gr.J.E)
 #' graph.simul.by.time.RNV(data_sim_RegNeg,new.window=TRUE,which.sim=c(1))
+#' 
+#' data(data_sim_CRNeg_1grpNeg1sgl)
+#' graph.simul.group(data_sim_CRNeg_1grpNeg1sgl,gr.Eq.time=TRUE,gr.tauq.time=TRUE)
 #'  
 #'  
 #'  
@@ -149,9 +165,10 @@ NULL
 
 
 #Through time, colored by simulation
-#################################
-#################################
-#################################
+##################################################################################################x
+################################# Colored by simulation, through time ##########################
+################################################################################################x
+#################################x
 #' @rdname simul.evol.graph.methods
 #' @usage graph.simul.by.time.by.sim(all_res_sim,new.window=FALSE,add.eq=TRUE,which.sim=NULL,
 #' gr.J.time=FALSE,gr.e.time=TRUE,gr.E.time=FALSE,gr.Etot.time=FALSE,
@@ -219,46 +236,97 @@ graph.simul.by.time.by.sim <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,
     leg_e[i,((n+1):(2*n))] <- leg_E[i,((n+1):(2*n))]/sum(leg_E[i,((n+1):(2*n))])
   }
   
-  #theoretical equilibrium
-  # A_base <- activities(kin_base,Keq)
-  # prediction <- predict(A_base,typmut_E,correl)
-  all_eq_th <- apply(all_res_sim$list_init$A0,1,predict_th,correl_fun,B_fun)#due to R transformation of matrix in numeric class when there is only one row (nsim=1)...
-  #all_eq_th <- apply(leg_A[,1:n],1,predict_th,correl_fun,B_fun)
-  eq_th_e <- NULL
-  eq_th_r <- NULL
-  for (i in 1:nsim) {
-    eq_th_e <- rbind(eq_th_e,all_eq_th[[i]]$pred_e)
-    eq_th_r <- rbind(eq_th_r,all_eq_th[[i]]$pred_r)
-  }
-  # enzpred <- eq_th$pred_e
-  # cpred <- eq_th$pred_c
-  lty_eq <- 2 #dashed lines
+  ##### Equilibrium ####
   
-  #effective equilibrium
-  if (correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
-    lty_eq <- 3 #dotted lines
-    eq_eff_e <- NULL
-    eq_eff_E <- NULL
-    eq_eff_tau <- NULL
+  #list of regulation group
+  #L_Phi_fun <- class_group(beta_fun)
+  #p_fun <- length(L_Phi_fun)
+  
+  #if enzymes are all co-regulated OR all independent
+  if (sum(1/B_fun)==1|sum(1/B_fun)==n) { #p_fun==1|p_fun==n #because sum(1/B)=p
+    #theoretical equilibrium
+    # A_base <- activities(kin_base,Keq)
+    # prediction <- predict(A_base,typmut_E,correl)
+    all_eq_th <- apply(all_res_sim$list_init$A0,1,predict_th,correl_fun,B_fun)#due to R transformation of matrix in numeric class when there is only one row (nsim=1)...
+    #all_eq_th <- apply(leg_A[,1:n],1,predict_th,correl_fun,B_fun)
+    eq_th_e <- NULL
+    eq_th_r <- NULL
     for (i in 1:nsim) {
-      eq_eff_by_sim <- predict_eff(leg_E[i,1:n],B_fun,leg_A[i,1:n],correl_fun)
-      eq_eff_e <- rbind(eq_eff_e,as.vector(eq_eff_by_sim$pred_e))
-      eq_eff_E <- rbind(eq_eff_E,as.vector(eq_eff_by_sim$pred_E))
-      eq_eff_tau <- rbind(eq_eff_tau,as.vector(eq_eff_by_sim$pred_tau))
+      eq_th_e <- rbind(eq_th_e,all_eq_th[[i]]$pred_e)
+      eq_th_r <- rbind(eq_th_r,all_eq_th[[i]]$pred_r)
     }
-  } else {
-    #effective equilibrium does not exist
+    # enzpred <- eq_th$pred_e
+    # cpred <- eq_th$pred_c
+    lty_eq <- 2 #dashed lines
+    
+    #effective equilibrium
+    if (correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
+      lty_eq <- 3 #dotted lines
+      eq_eff_e <- NULL
+      eq_eff_E <- NULL
+      eq_eff_tau <- NULL
+      for (i in 1:nsim) {
+        eq_eff_by_sim <- predict_eff(leg_E[i,1:n],B_fun,leg_A[i,1:n],correl_fun)
+        eq_eff_e <- rbind(eq_eff_e,as.vector(eq_eff_by_sim$pred_e))
+        eq_eff_E <- rbind(eq_eff_E,as.vector(eq_eff_by_sim$pred_E))
+        eq_eff_tau <- rbind(eq_eff_tau,as.vector(eq_eff_by_sim$pred_tau))
+      }
+    } else {
+      #effective equilibrium does not exist
+      eq_eff_e <- matrix(NA,nrow=nsim,ncol=(2*n))
+      eq_eff_E <- matrix(NA,nrow=nsim,ncol=(2*n))
+      eq_eff_tau <- matrix(NA,nrow=nsim,ncol=1)
+    }
+    
+    
+    
+  } else { #regulation groups
+    #set equilibria
+    eq_th_e <- matrix(NA,nrow=nsim,ncol=(2*n))
+    eq_th_r <- matrix(NA,nrow=nsim,ncol=(2*n))
+    
     eq_eff_e <- matrix(NA,nrow=nsim,ncol=(2*n))
     eq_eff_E <- matrix(NA,nrow=nsim,ncol=(2*n))
     eq_eff_tau <- matrix(NA,nrow=nsim,ncol=1)
+    
+    lty_eq <- 2
+    
+    #all equilibrium
+    all_eq_grp <- vector("list",length=nsim)
+    for (i in 1:nsim) {
+      all_eq_grp[[i]] <- predict_grp(leg_E[i,1:n],beta_fun,leg_A[i,1:n],correl_fun)
+      
+      #unique equilibrium for all simul
+      if (correl_fun=="RegPos") {
+        eq_th_e[i,] <- all_eq_grp[[i]]$pred_ei
+      }
+      #equilibrium depends on group types
+      if (correl_fun=="RegNeg") {
+        #which kind of groups
+        grp_typ <- group_types(beta_fun)
+        #if there are only negative groups, equilibrium depends on E0, else identical between simul
+        if (length(grp_typ$grp_neg)==length(unlist(grp_typ))) {
+          eq_eff_e[i,] <- all_eq_grp[[i]]$pred_ei
+        } else {
+          eq_th_e[i,] <- all_eq_grp[[i]]$pred_ei
+        }
+        #for Ei, Inf for grp pos or singletons, and different depending on E0 for grp neg
+        eq_eff_E[i,] <- all_eq_grp[[i]]$pred_Ei
+      }
+      #different equilibria depending on initial concentration E0
+      if (correl_fun=="CRPos"|correl_fun=="CRNeg") {
+        eq_eff_e[i,] <- all_eq_grp[[i]]$pred_ei
+        eq_eff_E[i,] <- all_eq_grp[[i]]$pred_Ei
+        #tau depends on the regulation group
+      }
+    } #loop end
   }
   
   
   
   
-  #########################
-  #######""" Graphics
-  #############################
+  ######################### Graphics ########################
+
   
   #which simulations will be represented. If NULL, all
   if (length(which.sim)==0) {which.sim <- 1:nsim}
@@ -422,9 +490,10 @@ graph.simul.by.time.by.sim <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,
   
   ##### Position tau
   if (gr.tau.time==TRUE) {
-    
-    #if tau exists
-    if (correl_fun=="RegPos"|correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
+     
+    #if tau exists and all enzymes co-regulated
+    if (sum(1/B_fun)==1)  {
+    #if (correl_fun=="RegPos"|correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
       #compute bounds of tau such as 0<e<1
       bounds_tau <- apply(leg_E[,1:n],1,range_tau,B_fun)
       #compute tau values for each simulation : simul in column
@@ -479,9 +548,10 @@ graph.simul.by.time.by.sim <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,
 
 
 #Through time, colored by enzyme
-#################################
-#################################
-#################################
+#############################################################################################""
+################################# Colored by enzyme, through time ################################
+###############################################################################################x
+#################################x
 #' @rdname simul.evol.graph.methods
 #' @usage graph.simul.by.time.by.enz(all_res_sim,new.window=FALSE,add.eq=TRUE,which.sim=NULL,
 #' gr.J.time=TRUE,gr.e.time=TRUE,gr.E.time=FALSE,gr.Etot.time=FALSE,
@@ -540,46 +610,89 @@ graph.simul.by.time.by.enz <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,
     leg_e[i,((n+1):(2*n))] <- leg_E[i,((n+1):(2*n))]/sum(leg_E[i,((n+1):(2*n))])
   }
   
-  #theoretical equilibrium
-  # A_base <- activities(kin_base,Keq)
-  # prediction <- predict(A_base,typmut_E,correl)
-  all_eq_th <- apply(all_res_sim$list_init$A0,1,predict_th,correl_fun,B_fun)#due to R transformation of matrix in numeric class when there is only one row (nsim=1)...
-  #all_eq_th <- apply(leg_A[,1:n],1,predict_th,correl_fun,B_fun)
-  eq_th_e <- NULL
-  eq_th_r <- NULL
-  for (i in 1:nsim) {
-    eq_th_e <- rbind(eq_th_e,all_eq_th[[i]]$pred_e)
-    eq_th_r <- rbind(eq_th_r,all_eq_th[[i]]$pred_r)
-  }
-  # enzpred <- eq_th$pred_e
-  # cpred <- eq_th$pred_c
-  lty_eq <- 2 #dashed lines
+  ##### Equilibrium #####
   
-  #effective equilibrium
-  if (correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
-    lty_eq <- 3 #dotted lines
-    eq_eff_e <- NULL
-    eq_eff_E <- NULL
-    eq_eff_tau <- NULL
+  #if enzymes are all co-regulated OR all independent
+  if (sum(1/B_fun)==1|sum(1/B_fun)==n) { #p_fun==1|p_fun==n #because sum(1/B)=p
+    #theoretical equilibrium
+    # A_base <- activities(kin_base,Keq)
+    # prediction <- predict(A_base,typmut_E,correl)
+    all_eq_th <- apply(all_res_sim$list_init$A0,1,predict_th,correl_fun,B_fun)#due to R transformation of matrix in numeric class when there is only one row (nsim=1)...
+    #all_eq_th <- apply(leg_A[,1:n],1,predict_th,correl_fun,B_fun)
+    eq_th_e <- NULL
+    eq_th_r <- NULL
     for (i in 1:nsim) {
-      eq_eff_by_sim <- predict_eff(leg_E[i,1:n],B_fun,leg_A[i,1:n],correl_fun)
-      eq_eff_e <- rbind(eq_eff_e,as.vector(eq_eff_by_sim$pred_e))
-      eq_eff_E <- rbind(eq_eff_E,as.vector(eq_eff_by_sim$pred_E))
-      eq_eff_tau <- rbind(eq_eff_tau,as.vector(eq_eff_by_sim$pred_tau))
+      eq_th_e <- rbind(eq_th_e,all_eq_th[[i]]$pred_e)
+      eq_th_r <- rbind(eq_th_r,all_eq_th[[i]]$pred_r)
     }
-  } else {
-    #effective equilibrium does not exist
+    # enzpred <- eq_th$pred_e
+    # cpred <- eq_th$pred_c
+    lty_eq <- 2 #dashed lines
+    
+    #effective equilibrium
+    if (correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
+      lty_eq <- 3 #dotted lines
+      eq_eff_e <- NULL
+      eq_eff_E <- NULL
+      eq_eff_tau <- NULL
+      for (i in 1:nsim) {
+        eq_eff_by_sim <- predict_eff(leg_E[i,1:n],B_fun,leg_A[i,1:n],correl_fun)
+        eq_eff_e <- rbind(eq_eff_e,as.vector(eq_eff_by_sim$pred_e))
+        eq_eff_E <- rbind(eq_eff_E,as.vector(eq_eff_by_sim$pred_E))
+        eq_eff_tau <- rbind(eq_eff_tau,as.vector(eq_eff_by_sim$pred_tau))
+      }
+    } else {
+      #effective equilibrium does not exist
+      eq_eff_e <- matrix(NA,nrow=nsim,ncol=(2*n))
+      eq_eff_E <- matrix(NA,nrow=nsim,ncol=(2*n))
+      eq_eff_tau <- matrix(NA,nrow=nsim,ncol=1)
+    }
+    
+  } else { #regulation groups
+    #set equilibria
+    eq_th_e <- matrix(NA,nrow=nsim,ncol=(2*n))
+    eq_th_r <- matrix(NA,nrow=nsim,ncol=(2*n))
+    
     eq_eff_e <- matrix(NA,nrow=nsim,ncol=(2*n))
     eq_eff_E <- matrix(NA,nrow=nsim,ncol=(2*n))
     eq_eff_tau <- matrix(NA,nrow=nsim,ncol=1)
+    
+    lty_eq <- 2
+    
+    #all equilibrium
+    all_eq_grp <- vector("list",length=nsim)
+    for (i in 1:nsim) {
+      all_eq_grp[[i]] <- predict_grp(leg_E[i,1:n],beta_fun,leg_A[i,1:n],correl_fun)
+      
+      #unique equilibrium for all simul
+      if (correl_fun=="RegPos") {
+        eq_th_e[i,] <- all_eq_grp[[i]]$pred_ei
+      }
+      #equilibrium depends on group types
+      if (correl_fun=="RegNeg") {
+        #which kind of groups
+        grp_typ <- group_types(beta_fun)
+        #if there are only negative groups, equilibrium depends on E0, else identical between simul
+        if (length(grp_typ$grp_neg)==length(unlist(grp_typ))) {
+          eq_eff_e[i,] <- all_eq_grp[[i]]$pred_ei
+        } else {
+          eq_th_e[i,] <- all_eq_grp[[i]]$pred_ei
+        }
+        #for Ei, Inf for grp pos or singletons, and different depending on E0 for grp neg
+        eq_eff_E[i,] <- all_eq_grp[[i]]$pred_Ei
+      }
+      #different equilibria depending on initial concentration E0
+      if (correl_fun=="CRPos"|correl_fun=="CRNeg") {
+        eq_eff_e[i,] <- all_eq_grp[[i]]$pred_ei
+        eq_eff_E[i,] <- all_eq_grp[[i]]$pred_Ei
+        #tau depends on the regulation group
+      }
+    } #loop end
   }
   
   
   
-  
-  #########################
-  #######""" Graphics
-  #############################
+  ######################### Graphics ####################################
   
   #which simulations are taken
   if (length(which.sim)==0) {which.sim <- 1:nsim}
@@ -730,7 +843,7 @@ graph.simul.by.time.by.enz <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,
       cont <- NULL
       for (k in 1:nrow(last_res)) {
         #computes response coefficients for each step of simulation
-        rep_row <- coef_rep(last_res[k,1:n],last_res[k,(2*n+4):(3*n)],correl_fun,beta_fun)
+        rep_row <- coef_rep(as.numeric(last_res[k,1:n]),as.numeric(last_res[k,(2*n+4):(3*n+3)]),correl_fun,beta_fun)
         cont <- rbind(cont,rep_row)
       }
       if (new.window==TRUE) {dev.new()}
@@ -751,8 +864,9 @@ graph.simul.by.time.by.enz <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,
     
     
     ##### Position tau
-    #if tau exists
-    if (correl_fun=="RegPos"|correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
+    #if tau exists when all enzymes are co-regulated
+    if (sum(1/B_fun)==1) {
+    #if (correl_fun=="RegPos"|correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
       #compute bounds of tau such as 0<e<1
       bounds_tau <- range_tau(leg_E[i,1:n],B_fun)
       #compute tau values for each row
@@ -798,21 +912,29 @@ graph.simul.by.time.by.enz <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,
 
 
 #Other graphics, colored by simulation
-#################################
-#################################
-#################################
+###########################################################################################"
+################################# Other graphics, colored by simulation ################################
+##################################################################################################x
+##################################x
 #' @rdname simul.evol.graph.methods
 #' @usage graph.simul.others.by.sim(all_res_sim,new.window=FALSE,add.eq=TRUE,which.sim=NULL,
 #' gr.Ef.E0=FALSE, gr.Af.A0=FALSE, gr.Ef.Af=FALSE, gr.J.A.E=TRUE,
-#' gr.J.e=FALSE, gr.J.E=FALSE, gr.J.A=FALSE, ...)
+#' gr.J.e=FALSE, gr.J.E=FALSE, env.curve=FALSE, gr.J.A=FALSE, ...)
 #' 
 #' @param gr.Ef.E0 Logical. Add graph of final concentrations (absolute E and relative e) depending its initial value? 
 #' @param gr.Af.A0 Logical. Add graph of final activities (resp. kinetic parameters) depending its initial value? 
 #' @param gr.Ef.Af Logical. Add graph of final concentrations (absolute E and relative e) depending on final activities A? 
 #' @param gr.J.A.E Logical. Add 3D-graph of flux J depending on concentrations E and activities A? 
 #' @param gr.J.e Logical. Add graph of flux J depending on \emph{relative} concentrations e?
-#' @param gr.J.E Logical. Add graph of flux J depending on \emph{absolute} concentrations E? 
+#' @param gr.J.E Logical. Add graph of flux J depending on \emph{absolute} concentrations E?
+#' @param env.curve Logical. Add envelope curve of competition dome? Available only for \code{gr.J.E=T} or \code{gr.J.e=T}.
 #' @param gr.J.A Logical. Add graph of of flux J depending on activities A? 
+#' 
+#' @details 
+#' \emph{Envelope curve}
+#' 
+#' The envelope curve is the projection of competition dome in graph of flux J depending on concentrations (\code{gr.J.E=TRUE} and \code{gr.J.e=TRUE}).
+#' This curve is available only if there is competition, if the total concentration and activities are identical between simulations, and activities are not subject yo mutations.
 #' 
 #' @return Function \code{graph.simul.others.by.sim} returns nothing.
 #' @export
@@ -820,7 +942,7 @@ graph.simul.by.time.by.enz <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,
 
 graph.simul.others.by.sim <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,which.sim=NULL,
                                       gr.Ef.E0=FALSE, gr.Af.A0=FALSE, gr.Ef.Af=FALSE, gr.J.A.E=TRUE,
-                                      gr.J.e=FALSE,gr.J.E=FALSE, gr.J.A=FALSE,...) {
+                                      gr.J.e=FALSE,gr.J.E=FALSE,env.curve=FALSE, gr.J.A=FALSE,...) {
   #here, variable 'i' is always used to indicate simulation number and 'j' for enzyme number
   
   ####### Take interessing parameters
@@ -862,46 +984,111 @@ graph.simul.others.by.sim <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,w
     leg_e[i,((n+1):(2*n))] <- leg_E[i,((n+1):(2*n))]/sum(leg_E[i,((n+1):(2*n))])
   }
   
-  #theoretical equilibrium
-  # A_base <- activities(kin_base,Keq)
-  # prediction <- predict(A_base,typmut_E,correl)
-  all_eq_th <- apply(all_res_sim$list_init$A0,1,predict_th,correl_fun,B_fun)#due to R transformation of matrix in numeric class when there is only one row (nsim=1)...
-  #all_eq_th <- apply(leg_A[,1:n],1,predict_th,correl_fun,B_fun)
-  eq_th_e <- NULL
-  eq_th_r <- NULL
-  for (i in 1:nsim) {
-    eq_th_e <- rbind(eq_th_e,all_eq_th[[i]]$pred_e)
-    eq_th_r <- rbind(eq_th_r,all_eq_th[[i]]$pred_r)
-  }
-  # enzpred <- eq_th$pred_e
-  # cpred <- eq_th$pred_c
-  lty_eq <- 2 #dashed lines
+  ##### Equilibrium ####
   
-  #effective equilibrium
-  if (correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
-    lty_eq <- 3 #dotted lines
-    eq_eff_e <- NULL
-    eq_eff_E <- NULL
-    eq_eff_tau <- NULL
+  #if enzymes are all co-regulated OR all independent
+  if (sum(1/B_fun)==1|sum(1/B_fun)==n) { #p_fun==1|p_fun==n #because sum(1/B)=p
+    #theoretical equilibrium
+    # A_base <- activities(kin_base,Keq)
+    # prediction <- predict(A_base,typmut_E,correl)
+    all_eq_th <- apply(all_res_sim$list_init$A0,1,predict_th,correl_fun,B_fun)#due to R transformation of matrix in numeric class when there is only one row (nsim=1)...
+    #all_eq_th <- apply(leg_A[,1:n],1,predict_th,correl_fun,B_fun)
+    eq_th_e <- NULL
+    eq_th_r <- NULL
     for (i in 1:nsim) {
-      eq_eff_by_sim <- predict_eff(leg_E[i,1:n],B_fun,leg_A[i,1:n],correl_fun)
-      eq_eff_e <- rbind(eq_eff_e,as.vector(eq_eff_by_sim$pred_e))
-      eq_eff_E <- rbind(eq_eff_E,as.vector(eq_eff_by_sim$pred_E))
-      eq_eff_tau <- rbind(eq_eff_tau,as.vector(eq_eff_by_sim$pred_tau))
+      eq_th_e <- rbind(eq_th_e,all_eq_th[[i]]$pred_e)
+      eq_th_r <- rbind(eq_th_r,all_eq_th[[i]]$pred_r)
     }
-  } else {
-    #effective equilibrium does not exist
+    # enzpred <- eq_th$pred_e
+    # cpred <- eq_th$pred_c
+    lty_eq <- 2 #dashed lines
+    
+    #effective equilibrium
+    if (correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
+      lty_eq <- 3 #dotted lines
+      eq_eff_e <- NULL
+      eq_eff_E <- NULL
+      eq_eff_tau <- NULL
+      for (i in 1:nsim) {
+        eq_eff_by_sim <- predict_eff(leg_E[i,1:n],B_fun,leg_A[i,1:n],correl_fun)
+        eq_eff_e <- rbind(eq_eff_e,as.vector(eq_eff_by_sim$pred_e))
+        eq_eff_E <- rbind(eq_eff_E,as.vector(eq_eff_by_sim$pred_E))
+        eq_eff_tau <- rbind(eq_eff_tau,as.vector(eq_eff_by_sim$pred_tau))
+      }
+    } else {
+      #effective equilibrium does not exist
+      eq_eff_e <- matrix(NA,nrow=nsim,ncol=(2*n))
+      eq_eff_E <- matrix(NA,nrow=nsim,ncol=(2*n))
+      eq_eff_tau <- matrix(NA,nrow=nsim,ncol=1)
+    }
+    
+  } else { #regulation groups
+    #set equilibria
+    eq_th_e <- matrix(NA,nrow=nsim,ncol=(2*n))
+    eq_th_r <- matrix(NA,nrow=nsim,ncol=(2*n))
+    
     eq_eff_e <- matrix(NA,nrow=nsim,ncol=(2*n))
     eq_eff_E <- matrix(NA,nrow=nsim,ncol=(2*n))
     eq_eff_tau <- matrix(NA,nrow=nsim,ncol=1)
+    
+    lty_eq <- 2
+    
+    #all equilibrium
+    all_eq_grp <- vector("list",length=nsim)
+    for (i in 1:nsim) {
+      all_eq_grp[[i]] <- predict_grp(leg_E[i,1:n],beta_fun,leg_A[i,1:n],correl_fun)
+      
+      #unique equilibrium for all simul
+      if (correl_fun=="RegPos") {
+        eq_th_e[i,] <- all_eq_grp[[i]]$pred_ei
+      }
+      #equilibrium depends on group types
+      if (correl_fun=="RegNeg") {
+        #which kind of groups
+        grp_typ <- group_types(beta_fun)
+        #if there are only negative groups, equilibrium depends on E0, else identical between simul
+        if (length(grp_typ$grp_neg)==length(unlist(grp_typ))) {
+          eq_eff_e[i,] <- all_eq_grp[[i]]$pred_ei
+        } else {
+          eq_th_e[i,] <- all_eq_grp[[i]]$pred_ei
+        }
+        #for Ei, Inf for grp pos or singletons, and different depending on E0 for grp neg
+        eq_eff_E[i,] <- all_eq_grp[[i]]$pred_Ei
+      }
+      #different equilibria depending on initial concentration E0
+      if (correl_fun=="CRPos"|correl_fun=="CRNeg") {
+        eq_eff_e[i,] <- all_eq_grp[[i]]$pred_ei
+        eq_eff_E[i,] <- all_eq_grp[[i]]$pred_Ei
+        #tau depends on the regulation group
+      }
+    } #loop end
   }
   
   
+  #envelope curve of competition dome
+  if (any(correl_fun==c("SC","RegPos","RegNeg"))) {env.curve <- FALSE} #envelope curve only if there is competition
+    if (!all.equal(as.numeric(apply(leg_E[,1:n],1,sum)), rep(sum(leg_E[1,1:n]),nsim))) {
+    #verify is Etot_0 is identical between all simulations, by comparing with Etot_0 of first simulation ; if not competition dome is different between simulations
+    #as.numeric to suppress eventual names
+    env.curve <- FALSE
+    }
+  if (same.kin0==FALSE|pmutA!=0) {env.curve <- FALSE} #if activities is different between or during simulations, th curve is modified
+  #if(env.curve==TRUE&(same.E0==TRUE|is.random.E0==TRUE)&same.A0==TRUE&pmutA==0) 
+  if (env.curve==TRUE)  {
+    #Etot_0 = sum(E0) for first simulation
+    Etot_0 <- sum(leg_E[1,1:n])
+    #only if A is identical between and during simulations. Take value of first simulation
+    A_base <- leg_A[1,1:n]
+    #compute curve
+    fsofp <- flux.shape.from.one.point(Etot_0,A_base,"Comp")
+    #max of the curve
+    eq_comp <- predict_th(A_base,"Comp")$pred_e
+    Jmax <- flux(Etot_0*eq_comp,A_base)
+  }
   
   
-  #########################
-  #######""" Graphics
-  #############################
+  ######################### Graphics #####################################
+  
   
   #which simulations will be represented. If NULL, all
   if (length(which.sim)==0) {which.sim <- 1:nsim}
@@ -1024,6 +1211,8 @@ graph.simul.others.by.sim <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,w
     }
   }
   
+  
+  
   if (gr.J.e==TRUE) {
     
     ####### 2D plot J en fonction de ej, colored by sim
@@ -1034,6 +1223,13 @@ graph.simul.others.by.sim <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,w
       for (i in which.sim) {#pour chaque simulation
         points(x=tabR[tabR$sim==i,j]/tabR[tabR$sim==i,2*n+1],y=tabR[tabR$sim==i,2*n+3],col=mycol_sim[i],cex=0.2)
       }
+      #envelope curve
+      if (env.curve==TRUE) {
+        #curve
+        lines(fsofp$x/Etot_0,fsofp$J[,j],lty=2,...)#,lwd=1.5
+        #max of the curve
+        points(eq_comp[j],Jmax,pch=21,bg="black",...)#bg='violet',cex=1.5
+      }
     }
   }
   
@@ -1043,9 +1239,16 @@ graph.simul.others.by.sim <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,w
     for (j in 1:n){
       if (new.window==TRUE) {dev.new()}
       #par(mar=c(5,5,5,5))
-      plot(x=1:npt,y=1:npt,xlab=paste("Concentration of enzyme ",j,sep=""),ylab="Flux",xlim=c(0,1),ylim=c(0,max(tabR[,2*n+3])),type="n",...)#)
+      plot(x=1:npt,y=1:npt,xlab=paste("Concentration of enzyme ",j,sep=""),ylab="Flux",xlim=c(0,max(tabR[,1:n])),ylim=c(0,max(tabR[,2*n+3])),type="n",...)#)
       for (i in which.sim) {#pour chaque simulation
         points(x=tabR[tabR$sim==i,j],y=tabR[tabR$sim==i,2*n+3],col=mycol_sim[i],cex=0.2)
+      }
+      #envelope curve
+      if (env.curve==TRUE) {
+        #curve
+        lines(fsofp$x,fsofp$J[,j],lty=2,...)#,lwd=1.5
+        #max of the curve
+        points(eq_comp[j]*Etot_0,Jmax,pch=21,bg="black",...)#bg='violet',cex=1.5
       }
     }
   }
@@ -1072,9 +1275,10 @@ graph.simul.others.by.sim <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,w
 
 
 #Through time, Range of Neutral Variation
-#################################
-#################################
-#################################
+#############################################################################################x
+################################# Range of Neutral Variation ########################
+##########################################################################################x
+##################################x
 #' @rdname simul.evol.graph.methods
 #' @usage graph.simul.by.time.RNV(all_res_sim,new.window=FALSE,add.eq=TRUE,which.sim=NULL,
 #' gr.RNV.E=TRUE,gr.RNV.size=FALSE,gr.RNV.delta=FALSE,
@@ -1153,49 +1357,93 @@ graph.simul.by.time.RNV <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,whi
     leg_e[i,((n+1):(2*n))] <- leg_E[i,((n+1):(2*n))]/sum(leg_E[i,((n+1):(2*n))])
   }
   
-  #theoretical equilibrium
-  # A_base <- activities(kin_base,Keq)
-  # prediction <- predict(A_base,typmut_E,correl)
-  all_eq_th <- apply(all_res_sim$list_init$A0,1,predict_th,correl_fun,B_fun)#due to R transformation of matrix in numeric class when there is only one row (nsim=1)...
-  #all_eq_th <- apply(leg_A[,1:n],1,predict_th,correl_fun,B_fun)
-  eq_th_e <- NULL
-  eq_th_r <- NULL
-  for (i in 1:nsim) {
-    eq_th_e <- rbind(eq_th_e,all_eq_th[[i]]$pred_e)
-    eq_th_r <- rbind(eq_th_r,all_eq_th[[i]]$pred_r)
-  }
-  # enzpred <- eq_th$pred_e
-  # cpred <- eq_th$pred_c
-  lty_eq <- 2 #dashed lines
+  ##### Equilibrium ####
   
-  #effective equilibrium
-  if (correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
-    lty_eq <- 3 #dotted lines
-    eq_eff_e <- NULL
-    eq_eff_E <- NULL
-    eq_eff_tau <- NULL
-    eq_eff_J <- NULL
+  #if enzymes are all co-regulated OR all independent
+  if (sum(1/B_fun)==1|sum(1/B_fun)==n) { #p_fun==1|p_fun==n #because sum(1/B)=p
+    #theoretical equilibrium
+    # A_base <- activities(kin_base,Keq)
+    # prediction <- predict(A_base,typmut_E,correl)
+    all_eq_th <- apply(all_res_sim$list_init$A0,1,predict_th,correl_fun,B_fun)#due to R transformation of matrix in numeric class when there is only one row (nsim=1)...
+    #all_eq_th <- apply(leg_A[,1:n],1,predict_th,correl_fun,B_fun)
+    eq_th_e <- NULL
+    eq_th_r <- NULL
     for (i in 1:nsim) {
-      eq_eff_by_sim <- predict_eff(leg_E[i,1:n],B_fun,leg_A[i,1:n],correl_fun)
-      eq_eff_e <- rbind(eq_eff_e,as.vector(eq_eff_by_sim$pred_e))
-      eq_eff_E <- rbind(eq_eff_E,as.vector(eq_eff_by_sim$pred_E))
-      eq_eff_tau <- rbind(eq_eff_tau,as.vector(eq_eff_by_sim$pred_tau))
-      eq_eff_J <- rbind(eq_eff_J,flux(as.vector(eq_eff_by_sim$pred_E),leg_A[i,1:n],X_fun))
+      eq_th_e <- rbind(eq_th_e,all_eq_th[[i]]$pred_e)
+      eq_th_r <- rbind(eq_th_r,all_eq_th[[i]]$pred_r)
     }
-  } else {
-    #effective equilibrium does not exist
+    # enzpred <- eq_th$pred_e
+    # cpred <- eq_th$pred_c
+    lty_eq <- 2 #dashed lines
+    
+    #effective equilibrium
+    if (correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
+      lty_eq <- 3 #dotted lines
+      eq_eff_e <- NULL
+      eq_eff_E <- NULL
+      eq_eff_tau <- NULL
+      eq_eff_J <- NULL
+      for (i in 1:nsim) {
+        eq_eff_by_sim <- predict_eff(leg_E[i,1:n],B_fun,leg_A[i,1:n],correl_fun)
+        eq_eff_e <- rbind(eq_eff_e,as.vector(eq_eff_by_sim$pred_e))
+        eq_eff_E <- rbind(eq_eff_E,as.vector(eq_eff_by_sim$pred_E))
+        eq_eff_tau <- rbind(eq_eff_tau,as.vector(eq_eff_by_sim$pred_tau))
+        eq_eff_J <- rbind(eq_eff_J,flux(as.vector(eq_eff_by_sim$pred_E),leg_A[i,1:n],X_fun))
+      }
+    } else {
+      #effective equilibrium does not exist
+      eq_eff_e <- matrix(NA,nrow=nsim,ncol=(2*n))
+      eq_eff_E <- matrix(NA,nrow=nsim,ncol=(2*n))
+      eq_eff_tau <- matrix(NA,nrow=nsim,ncol=1)
+      eq_eff_J <- rep(NA,nsim)
+    }
+    
+  } else { #regulation groups
+    #set equilibria
+    eq_th_e <- matrix(NA,nrow=nsim,ncol=(2*n))
+    eq_th_r <- matrix(NA,nrow=nsim,ncol=(2*n))
+    
     eq_eff_e <- matrix(NA,nrow=nsim,ncol=(2*n))
     eq_eff_E <- matrix(NA,nrow=nsim,ncol=(2*n))
     eq_eff_tau <- matrix(NA,nrow=nsim,ncol=1)
-    eq_eff_J <- rep(NA,nsim)
+    
+    lty_eq <- 2
+    
+    #all equilibrium
+    all_eq_grp <- vector("list",length=nsim)
+    for (i in 1:nsim) {
+      all_eq_grp[[i]] <- predict_grp(leg_E[i,1:n],beta_fun,leg_A[i,1:n],correl_fun)
+      
+      #unique equilibrium for all simul
+      if (correl_fun=="RegPos") {
+        eq_th_e[i,] <- all_eq_grp[[i]]$pred_ei
+      }
+      #equilibrium depends on group types
+      if (correl_fun=="RegNeg") {
+        #which kind of groups
+        grp_typ <- group_types(beta_fun)
+        #if there are only negative groups, equilibrium depends on E0, else identical between simul
+        if (length(grp_typ$grp_neg)==length(unlist(grp_typ))) {
+          eq_eff_e[i,] <- all_eq_grp[[i]]$pred_ei
+        } else {
+          eq_th_e[i,] <- all_eq_grp[[i]]$pred_ei
+        }
+        #for Ei, Inf for grp pos or singletons, and different depending on E0 for grp neg
+        eq_eff_E[i,] <- all_eq_grp[[i]]$pred_Ei
+      }
+      #different equilibria depending on initial concentration E0
+      if (correl_fun=="CRPos"|correl_fun=="CRNeg") {
+        eq_eff_e[i,] <- all_eq_grp[[i]]$pred_ei
+        eq_eff_E[i,] <- all_eq_grp[[i]]$pred_Ei
+        #tau depends on the regulation group
+      }
+    } #loop end
   }
   
   
   
-  
-  #########################
-  #######""" Graphics
-  #############################
+  ######################### Graphics ###########################
+
   
   #which simulations are taken
   if (length(which.sim)==0) {which.sim <- 1:nsim}
@@ -1602,6 +1850,373 @@ graph.simul.by.time.RNV <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,whi
 
 
 
+#Regulation groups
+#############################################################################################"
+################################# Regulation groups ###########################################
+#############################################################################################x
+###############################"
+#' @rdname simul.evol.graph.methods
+#' @usage graph.simul.group(all_res_sim,new.window=FALSE,add.eq=TRUE,which.sim=NULL,which.grp=NULL,
+#' gr.eiq.time=TRUE,gr.eq.time=TRUE,gr.ei.time=FALSE,gr.Eq.time=FALSE,gr.Ei.time=FALSE,
+#' gr.tauq.time=FALSE,lwd.eq=1.5,...)
+#' 
+#' @param gr.eiq.time,gr.eq.time,gr.ei.time,gr.Eq.time,gr.Ei.time,gr.tauq.time Logical.
+#'  Add graph intra-group relative concentrations \eqn{e_i^q} / inter-group relative concentrations \eqn{e^q} / total relative concentrations \eqn{e_i} / 
+#'  group absolute concentrations \eqn{E^q} / absolute concentrations \eqn{E_i} / group driving variable \eqn{\tau^q} in relation to time?
+#' @param which.grp Numeric vector containing integer numbers between 1 and \eqn{p} (number of regulation groups). Which regulation groups would you represent? If \code{NULL} (default), all groups would be represented.
+#'  
+#'  
+#' 
+#' @return Function \code{graph.simul.group} returns an invisible list of \code{nsim} elements.
+#' Each element contains the output of \code{\link{predict_grp}}, which computes the equilibria, for the corresponding simulation.
+#' 
+#' 
+#' @export
 
+graph.simul.group <- function(all_res_sim,new.window=FALSE,add.eq=TRUE,which.sim=NULL,which.grp=NULL,
+                                       gr.eiq.time=TRUE,gr.eq.time=TRUE,gr.ei.time=FALSE,gr.Eq.time=FALSE,gr.Ei.time=FALSE,gr.tauq.time=FALSE,
+                                       lwd.eq=1.5,...) {
+  #here, variable 'i' is always used to indicate simulation number and 'j' for enzyme number
+  
+  ####### Take interessing parameters
+  
+  #input parameters
+  n <- all_res_sim$param$n #number of enzymes
+  nsim <- all_res_sim$param$nsim #number of simulations
+  Keq_fun <- all_res_sim$param$Keq #equilibrium constants
+  X_fun <- all_res_sim$param$X #numerator of flux
+  beta_fun <- all_res_sim$param$beta #co-regulation coefficients
+  B_fun <- all_res_sim$param$B #global co-regulation coefficients
+  correl_fun <- all_res_sim$param$correl #constraints on system
+  N_fun <- all_res_sim$param$N #population size
+  pasobs <- all_res_sim$param$pasobs
+  npt <- all_res_sim$param$npt #number of observations
+  ngene <- npt*pasobs #number of generations
+  pmutA <- all_res_sim$param$pmutA #proba mutation of kin
+  same.E0 <- all_res_sim$param$same.E0
+  is.random.E0 <- all_res_sim$param$is.random.E0
+  same.kin0 <- all_res_sim$param$same.kin0
+  is.random.kin0 <- all_res_sim$param$is.random.kin0
+  
+  
+  #simulation results
+  tabR <- all_res_sim$tabR
+  tabP_e <- all_res_sim$tabP_e
+  tabP_c <- all_res_sim$tabP_r
+  
+  #initial and final values of E, kin, A and relative concentrations e
+  #matrix such as: each simulation in row, initial values from column 1 to n and final values from column n+1 to 2n
+  leg_E <- cbind(all_res_sim$list_init$E0,all_res_sim$list_final$E_f)
+  leg_kin <- cbind(all_res_sim$list_init$kin0,all_res_sim$list_final$kin_f)
+  leg_A <- cbind(all_res_sim$list_init$A0,all_res_sim$list_final$A_f)
+  leg_e <- leg_E
+  for (i in 1:nsim){
+    #initial relative concentrations e0
+    leg_e[i,1:n] <- leg_E[i,1:n]/sum(leg_E[i,1:n])
+    #final relative concentrations e_f
+    leg_e[i,((n+1):(2*n))] <- leg_E[i,((n+1):(2*n))]/sum(leg_E[i,((n+1):(2*n))])
+  }
+  
+  #regulation groups
+  L_Phi_fun <- class_group(beta_fun)
+  p_fun <- length(L_Phi_fun)
+  #which groupss will be represented. If NULL, all
+  if (length(which.grp)==0) {which.grp <- 1:p_fun}
+  #list of groupe types
+  grp_typ <- group_types(beta_fun)
+  #extract concentration in regulation groups
+  tabEtot <- extract.tabEtot(tabR,beta_fun)
+  
+
+  #### Equilibrium ####
+  
+  ### list of equilibrium for all initial concentration
+  all_eq_grp <- vector("list",length=nsim)
+  for (i in 1:nsim) {
+    all_eq_grp[[i]] <- predict_grp(leg_E[i,1:n],beta_fun,leg_A[i,1:n],correl_fun)
+  }
+  #not usable, because A might be different between simulations
+  #all_eq <- apply(all_res_sim$list_init$E0,1,predict_grp,beta_fun,leg_A[1,1:n],correl_fun)
+  
+  
+  
+  # #theoretical equilibrium
+  # # A_base <- activities(kin_base,Keq)
+  # # prediction <- predict(A_base,typmut_E,correl)
+  # all_eq_th <- apply(all_res_sim$list_init$A0,1,predict_th,correl_fun,B_fun)#due to R transformation of matrix in numeric class when there is only one row (nsim=1)...
+  # #all_eq_th <- apply(leg_A[,1:n],1,predict_th,correl_fun,B_fun)
+  # eq_th_e <- NULL
+  # eq_th_r <- NULL
+  # for (i in 1:nsim) {
+  #   eq_th_e <- rbind(eq_th_e,all_eq_th[[i]]$pred_e)
+  #   eq_th_r <- rbind(eq_th_r,all_eq_th[[i]]$pred_r)
+  # }
+  # # enzpred <- eq_th$pred_e
+  # # cpred <- eq_th$pred_c
+  # lty_eq <- 2 #dashed lines
+  # 
+  # #effective equilibrium
+  # if (correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
+  #   lty_eq <- 3 #dotted lines
+  #   eq_eff_e <- NULL
+  #   eq_eff_E <- NULL
+  #   eq_eff_tau <- NULL
+  #   for (i in 1:nsim) {
+  #     eq_eff_by_sim <- predict_eff(leg_E[i,1:n],B_fun,leg_A[i,1:n],correl_fun)
+  #     eq_eff_e <- rbind(eq_eff_e,as.vector(eq_eff_by_sim$pred_e))
+  #     eq_eff_E <- rbind(eq_eff_E,as.vector(eq_eff_by_sim$pred_E))
+  #     eq_eff_tau <- rbind(eq_eff_tau,as.vector(eq_eff_by_sim$pred_tau))
+  #   }
+  # } else {
+  #   #effective equilibrium does not exist
+  #   eq_eff_e <- matrix(NA,nrow=nsim,ncol=(2*n))
+  #   eq_eff_E <- matrix(NA,nrow=nsim,ncol=(2*n))
+  #   eq_eff_tau <- matrix(NA,nrow=nsim,ncol=1)
+  # }
+
+  
+  ######################### Graphics ##############################
+
+  
+  #which simulations will be represented. If NULL, all
+  if (length(which.sim)==0) {which.sim <- 1:nsim}
+  
+  #color vector for simulations
+  mycol_sim <- rainbow(nsim)
+  #color for theoretical equilibrium (identical for all simulation if A does not change)
+  #if (pmutA==0) {col_th <- 1} else {col_th <- mycol_sim}
+  #color for effective equilibrium: its changes if different A0 or E0
+  #if (same.kin0==TRUE&same.E0==TRUE&pmutA==0) {col_eff <- 1} else {col_eff <- mycol_sim}
+  
+  #time axis: number of generations, but only 'npt' observations every 'pasobs' generations
+  time.axis <- seq(1,ngene,by=pasobs)
+  
+  
+  #line type and color depending if the equilibrium is unique according to the initial conditions
+  lty_eq <- 2 #dashed lines
+  col_eq <- rep(1,nsim) #black lines for all simul
+  if (pmutA!=0) { #if mutations of activities, equilibrium not computed
+    lty_eq <- 0
+  }
+  if (any(correl_fun==c("RegNeg","CRPos","CRNeg"))) {
+    lty_eq <- 3 #dotted lines
+    if (same.E0==FALSE) {
+      col_eq <- mycol_sim #col according to simulations
+    }
+    #note that with "RegNeg", equilibrium is unique if pos grp and depends on E0 if neg grp, but too complicate to program
+  }
+  
+  
+  #####"
+  #Every graph follow same scheme:
+  #1. empty graph with time in x axis and interesting variable in y axis
+  #2. for each simulation
+  #3. add connected points for simulation i for current variable
+  #4. add text for simulation number at end of x axis
+  #5. eventually, add predicted values
+  
+  
+  #### Intra-group relative concentrations e_i^q = Ei/Eq
+  if (gr.eiq.time==TRUE) {
+
+    for (q in which.grp) { #for each group
+      for (j in unlist(L_Phi_fun[q])){ #for each enzyme in this group
+        #one graph by enzyme
+        if (new.window==TRUE) {dev.new()}
+        
+        plot(seq(1,ngene,by=pasobs),tabEtot[1:npt,j],ylim=c(0,1), xlim=c(0,ngene+1000),type="n",xlab="Generation",ylab=paste("Intra-group relative concentration of enzyme ",j," in group ",q, sep=""),...)
+        #empty graph: x axis = nb of generations, y axis = current enzyme j, ylim = [0,1] because it's relative concentrations
+        
+        for (i in which.sim){ #for each simulation
+          #add connected points on graph for relative concentrations of enzyme j in group q for simulation i
+          points(seq(1,ngene,by=pasobs),tabEtot[tabEtot$sim==i,j]/tabEtot[tabEtot$sim==i,(n+q)],type="l",col=mycol_sim[i])
+          #add simulation number at end of x axis
+          text(x=(ngene+1000),y=tabEtot[i*npt,j]/tabEtot[i*npt,(n+q)],labels=i,col=mycol_sim[i])
+          
+          
+          # equilibrium
+          if (pmutA==0&add.eq==TRUE) {
+            abline(h=all_eq_grp[[i]]$pred_eiq[j],lty=lty_eq,col=col_eq[i],lwd=lwd.eq)
+          }
+        }
+        # if (add.eq==TRUE) {
+        #   abline(h=1/B_fun[j],lty=3,col=1,lwd=1) #concentration relative 1/B
+        # }
+        
+        #abline(h=E0[j]/sum(E0[unlist(L_Phi[q])]),lty=2,col=2,lwd=1.5) #concentration relative initiale
+      }
+    }
+  }
+  
+  
+  ###### Inter-group relative contration e^q = Eq/Etot
+  for (q in which.grp) { #for each group
+    #one graph by group
+    if (new.window==TRUE) {dev.new()}
+    
+    plot(seq(1,ngene,by=pasobs),tabEtot[1:npt,(n+q)],ylim=c(0,1), xlim=c(0,ngene+1000),type="n",xlab="Generation",ylab=paste("Inter-group relative concentration of group ",q, sep=""),...)
+    #empty graph: x axis = nb of generations, y axis = current group q, ylim = [0,1] because it's relative concentrations
+    
+    for (i in which.sim){ #for each simulation
+      #add connected points on graph for relative concentrations of group q for simulation i
+      points(seq(1,ngene,by=pasobs),tabEtot[tabEtot$sim==i,(n+q)]/tabEtot[tabEtot$sim==i,(n+p_fun+1)],type="l",col=mycol_sim[i])
+      #add simulation number at end of x axis
+      text(x=(ngene+1000),y=tabEtot[i*npt,(n+q)]/tabEtot[i*npt,(n+p_fun+1)],labels=i,col=mycol_sim[i])
+      
+      # equilibrium
+      if (pmutA==0&add.eq==TRUE) {
+        abline(h=all_eq_grp[[i]]$pred_eq[q],lty=lty_eq,col=col_eq[i],lwd=lwd.eq)
+      }
+    }
+    #abline(h=sum(E0[unlist(L_Phi[q])])/sum(E0),lty=2,col=2,lwd=1.5) #concentration relative initiale
+  }
+  
+  
+  ##### Total relative concentrations e_i = Ei/Etot
+  if (gr.ei.time==TRUE) {
+    for (j in 1:n){ #for each enzyme
+      
+      #seach group for this enzyme
+      q_fun <- search_group(j,L_Phi_fun)
+      
+      #if the group is in selected group
+      if (any(q_fun==which.grp)) {
+        
+        #one graph by enzyme
+        if (new.window==TRUE) {dev.new()}
+        
+        #par(mar=c(5,5,5,5))
+        plot(seq(1,ngene,by=pasobs),tabEtot[1:npt,j],ylim=c(0,1), xlim=c(0,ngene+1000),type="n",xlab="Generation",ylab=paste("Total relative concentration of enzyme ",j, sep=""),...)#,cex.main=2,cex.lab=1.6,cex.axis=1.3)
+        #empty graph: x axis = nb of generations, y axis = current enzyme j, ylim = [0,1] because it's relative concentrations
+        
+        for (i in which.sim){ #for each simulation
+          #add connected points on graph for relative concentrations of enzyme j for simulation i
+          points(seq(1,ngene,by=pasobs),tabEtot[tabEtot$sim==i,j]/tabEtot[tabEtot$sim==i,(n+p_fun+1)],type="l",col=mycol_sim[i],...)#,lwd=1.5)
+          #add simulation number at end of x axis
+          text(x=(ngene+1000),y=tabEtot[i*npt,j]/tabEtot[i*npt,(n+p_fun+1)],labels=i,col=mycol_sim[i])
+          
+          # equilibrium
+          if (pmutA==0&add.eq==TRUE) {
+            abline(h=all_eq_grp[[i]]$pred_ei[j],lty=lty_eq,col=col_eq[i],lwd=lwd.eq)
+          }
+        }
+        
+      }
+    }
+  }
+  
+  #### Absolute concentrations Eq = sum(Ei) in group q
+  if (gr.Eq.time==TRUE) {
+    for (q in which.grp){
+      if (new.window==TRUE) {dev.new()}
+      #par(mar=c(5,5,5,5))
+      plot(seq(1,ngene,by=pasobs),tabEtot[1:npt,n+q],ylim=c(0,max(tabEtot[,(n+1):(n+p_fun)])), xlim=c(0,ngene+1000),type="n",xlab="Generation",ylab=paste("Sum of absolute concentrations in group ",q, sep=""),...)#,cex.main=2,cex.lab=1.6,cex.axis=1.3)
+      
+      for (i in which.sim){
+        points(seq(1,ngene,by=pasobs),tabEtot[tabEtot$sim==i,n+q],type="l",col=mycol_sim[i],...)#,lwd=1.5)
+        text(x=(ngene+1000),y=tabEtot[i*npt,n+q],labels=i,col=mycol_sim[i])
+        #prédiction e* x Etot selon mutation de A
+        #points(seq(1,ngene,by=pasobs),y=tabP_e[(tabP_e[,n+1]==i),j]*tabR[tabR$sim==i,2*n+1],type="l",lty=2,lwd=1.5,col=mycol_sim[i])
+        # equilibrium
+        if (pmutA==0&add.eq==TRUE) {
+          abline(h=all_eq_grp[[i]]$pred_Eq[q],lty=lty_eq,col=col_eq[i],lwd=lwd.eq)
+        }  
+      }
+    }
+  }
+  
+  ##### Absolute concentrations Ei
+  if (gr.Ei.time==TRUE) {
+    for (j in 1:n){
+      if (new.window==TRUE) {dev.new()}
+      #par(mar=c(5,5,5,5))
+      plot(seq(1,ngene,by=pasobs),tabEtot[1:npt,j],ylim=c(0,max(tabEtot[,1:n])), xlim=c(0,ngene+1000),type="n",xlab="Generation",ylab=paste("Absolute concentration of enzyme ",j, sep=""),...)#,cex.main=2,cex.lab=1.6,cex.axis=1.3)
+      
+      for (i in which.sim){
+        points(seq(1,ngene,by=pasobs),tabEtot[tabEtot$sim==i,j],type="l",col=mycol_sim[i],...)#,lwd=1.5)
+        text(x=(ngene+1000),y=tabEtot[i*npt,j],labels=i,col=mycol_sim[i])
+        # equilibrium
+        if (pmutA==0&add.eq==TRUE) {
+          abline(h=all_eq_grp[[i]]$pred_Ei[j],lty=lty_eq,col=col_eq[i],lwd=lwd.eq)
+        }
+        
+      }
+    }
+  }
+  
+  
+  
+  
+  # ##### Etot
+  # if (gr.Etot.time==TRUE) {
+  #   if (new.window==TRUE) {dev.new()}
+  #   #par(mar=c(5,5,5,5))
+  #   plot(seq(1,ngene,by=pasobs),tabR[1:npt,j],ylim=c(0,max(tabR[,2*n+1])), xlim=c(0,ngene+1000),type="n",xlab="Generation",ylab="Total concentration",...)#,cex.main=2,cex.lab=1.6,cex.axis=1.3)
+  #   
+  #   for (i in which.sim){
+  #     points(seq(1,ngene,by=pasobs),tabR[tabR$sim==i,2*n+1],type="l",col=mycol_sim[i],...)#,lwd=1.5)
+  #     text(x=(ngene+1000),y=tabR[i*npt,2*n+1],labels=i,col=mycol_sim[i])
+  #   }
+  # }
+  
+  
+  
+  
+  ##### Position tau^q
+  if (gr.tauq.time==TRUE) {
+    
+    #for each selected group
+    for (q in which.grp) {
+      
+      #enzymes in current group
+      phi_q <- L_Phi_fun[[q]]
+      
+      #which group type
+      which.typ.q <- search_group(q,grp_typ)
+      
+      #if tau exists only in positive or negative groups
+      if (names(which.typ.q)=="grp_pos"|names(which.typ.q)=="grp_neg") {
+        #compute bounds of tau such as 0<eiq<1
+        bounds_tau <- apply(leg_E[,phi_q],1,range_tau,B_fun[phi_q])
+        #compute tau values for each simulation : simul in column
+        tabtau <- matrix(0,nrow=npt,ncol=nsim)
+        for (i in 1:nsim) {
+          #take concentration for current simulation
+          last_res <- tabEtot[tabEtot$sim==i,1:n]
+          #compute all tau for current simulation i
+          tabtau[,i] <- apply(last_res[,phi_q],1,droite_tau,leg_E[i,phi_q],B_fun[phi_q])
+        }
+        
+        # tau = f(t)
+        if (new.window==TRUE) {dev.new()}
+        #par(mar=c(5,5,5,5))
+        plot(seq(1,ngene,by=pasobs),tabtau[,1],xlim=c(0,ngene+1000),ylim=c(0,1),type="n",xlab="Generation",ylab=paste0("Tau for group ",q),...)#,cex.main=2,cex.lab=1.6,cex.axis=1.3)
+        for (i in which.sim){
+          points(seq(1,ngene,by=pasobs),tabtau[,i],type="l",col=mycol_sim[i],...)#,lwd=1.5)
+          text(x=(ngene+1000),y=tabtau[npt,i],labels=i,col=mycol_sim[i])
+          
+          #bounds of tau
+          #abline(h=bounds_tau,lwd=2)
+          #theoretical equilibrium
+          #abline(h=1,lty=2,lwd=2)
+          #effective equilibrium
+          
+          # equilibrium
+          if (pmutA==0&add.eq==TRUE) {
+            abline(h=all_eq_grp[[i]]$pred_tau[q],lty=lty_eq,col=col_eq[i],lwd=lwd.eq)
+          }
+          
+        }
+        
+      }
+      
+    }
+    
+    
+  }
+  
+  
+  return(invisible(list(eq_grp=all_eq_grp)))
+}
 
 

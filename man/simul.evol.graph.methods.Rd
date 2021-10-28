@@ -6,6 +6,7 @@
 \alias{graph.simul.by.time.by.enz}
 \alias{graph.simul.others.by.sim}
 \alias{graph.simul.by.time.RNV}
+\alias{graph.simul.group}
 \title{Graphic methods for simulations of enzyme evolution}
 \usage{
 graph.simul.by.time.by.sim(all_res_sim,new.window=FALSE,add.eq=TRUE,which.sim=NULL,
@@ -20,12 +21,16 @@ gr.rep.time=FALSE,gr.sim.heading=FALSE,lwd.eq=1.5,...)
 
 graph.simul.others.by.sim(all_res_sim,new.window=FALSE,add.eq=TRUE,which.sim=NULL,
 gr.Ef.E0=FALSE, gr.Af.A0=FALSE, gr.Ef.Af=FALSE, gr.J.A.E=TRUE,
-gr.J.e=FALSE, gr.J.E=FALSE, gr.J.A=FALSE, ...)
+gr.J.e=FALSE, gr.J.E=FALSE, env.curve=FALSE, gr.J.A=FALSE, ...)
 
 graph.simul.by.time.RNV(all_res_sim,new.window=FALSE,add.eq=TRUE,which.sim=NULL,
 gr.RNV.E=TRUE,gr.RNV.size=FALSE,gr.RNV.delta=FALSE,
 gr.RNV.J=FALSE,zoom.RNV.J=NULL,gr.sim.heading=FALSE,
 col_RNV=c("grey60","grey80"),lty_RNV=c("dashed","longdash"),lwd.eq=1.5,...)
+
+graph.simul.group(all_res_sim,new.window=FALSE,add.eq=TRUE,which.sim=NULL,which.grp=NULL,
+gr.eiq.time=TRUE,gr.eq.time=TRUE,gr.ei.time=FALSE,gr.Eq.time=FALSE,gr.Ei.time=FALSE,
+gr.tauq.time=FALSE,lwd.eq=1.5,...)
 }
 \arguments{
 \item{all_res_sim}{List, the output of function \code{\link{simul.evol.enz.multiple}} (results of evolution simulation).}
@@ -62,6 +67,8 @@ kinetic parameters \code{kin} / activities \code{A} in relation to time?}
 
 \item{gr.J.E}{Logical. Add graph of flux J depending on \emph{absolute} concentrations E?}
 
+\item{env.curve}{Logical. Add envelope curve of competition dome? Available only for \code{gr.J.E=T} or \code{gr.J.e=T}.}
+
 \item{gr.J.A}{Logical. Add graph of of flux J depending on activities A?}
 
 \item{gr.RNV.E, gr.RNV.size, gr.RNV.delta}{Logical. Add graph concentrations \code{E} with its RNV / RNV size and RNV size divided by Etot / apparent mutation effect \code{delta} corresponding to RNV in relation to time?}
@@ -72,6 +79,12 @@ kinetic parameters \code{kin} / activities \code{A} in relation to time?}
 If it is nor \code{NULL} nor vector of length 2, there is no zoom on flux.}
 
 \item{col_RNV, lty_RNV}{Vector of length 2, for color (resp. lty, see plot function) of RNV lines. First element correspond to inferior bounds and second one to superior bounds of RNV.}
+
+\item{which.grp}{Numeric vector containing integer numbers between 1 and \eqn{p} (number of regulation groups). Which regulation groups would you represent? If \code{NULL} (default), all groups would be represented.}
+
+\item{gr.eiq.time, gr.eq.time, gr.ei.time, gr.Eq.time, gr.Ei.time, gr.tauq.time}{Logical.
+Add graph intra-group relative concentrations \eqn{e_i^q} / inter-group relative concentrations \eqn{e^q} / total relative concentrations \eqn{e_i} / 
+group absolute concentrations \eqn{E^q} / absolute concentrations \eqn{E_i} / group driving variable \eqn{\tau^q} in relation to time?}
 }
 \value{
 Function \code{graph.simul.by.time.by.sim} returns invisible list of 5 elements:
@@ -94,6 +107,9 @@ Function \code{graph.simul.by.time.RNV} returns invisible list of 2 elements:
    \item \code{$RNV_mean_size}: Numeric matrix of \code{n+2} columns. Row number is between \code{nsim} and \code{2*nsim}, depending on applied constraint.
    \code{n} first columns correspond to RNV mean size for corresponding enzyme for last half simulation; column \code{n+1} indicates simulation number and column \code{n+2} RNV number (between 1 and 2).
 }
+
+Function \code{graph.simul.group} returns an invisible list of \code{nsim} elements.
+Each element contains the output of \code{\link{predict_grp}}, which computes the equilibria, for the corresponding simulation.
 }
 \description{
 Graphics illustrating enzyme evolution simulations obtained by function \code{\link{simul.evol.enz.multiple}}.
@@ -105,6 +121,8 @@ Function \code{graph.simul.by.time.by.enz} gives graphics depending on time, col
 Function \code{graph.simul.others.by.sim} gives different graphics depending on other variables than time in x-axis.
 
 Function \code{graph.simul.by.time.RNV} gives graphics of \emph{Range of Neutral Variation} (RNV) for each enzyme.
+
+Function \code{graph.simul.group} gives graphics depending on time, colored by simulations, specifically for regulation groups.
 }
 \details{
 \emph{If only one simulation may be represented, use preferably function \code{graph.simul.by.time.by.enz}.}
@@ -113,7 +131,7 @@ Colors for simulations are taken in palette \code{rainbow}.
 Colors for enzymes correspond to their number plus one.
 
 \bold{Function \code{graph.simul.by.time.by.sim}} gives graphs of flux, relative concentrations, absolute concentrations, total concentration, kinetic parameters and activities through time.
-In addition, if exists, gives also driving variable \eqn{\tau} in relation to time.
+In addition, if all enzymes are co-regulated, gives also driving variable \eqn{\tau} in relation to time.
 \emph{Lines are colored according to simulation.} There is one graph by enzyme if necessary.
 Dashed lines correspond to theoretical equilibrium, and dotted lines to effective equilibrium.
 Every graph follow same scheme:
@@ -127,7 +145,7 @@ Every graph follow same scheme:
 
 
 \bold{Function \code{graph.simul.by.time.by.enz}} gives graphs of flux, relative concentrations, absolute concentrations, total concentration, kinetic parameters, activities and response coefficients through time. 
-In addition, if exists, gives also driving variable \eqn{\tau} in relation to time and flux in relation to \eqn{\tau}.
+In addition, if all enzymes are co-regulated, gives also driving variable \eqn{\tau} in relation to time and flux in relation to \eqn{\tau}.
 \emph{Lines are colored according to enzyme.} There is one graph by simulation. An heading with parameters of current simulation can be added with \code{gr.sim.heading}
 Dashed lines correspond to theoretical equilibrium, and dotted lines to effective equilibrium.
 \enumerate{
@@ -163,10 +181,27 @@ One color by enzyme. The colored numbers correspond to the simulations.
 Lines are colored by enzymes. Bounds of RNV is colored depending on \code{col_RNV}.
 
 
+#' \bold{Function \code{graph.simul.group}} gives graphs of:
+\itemize{
+   \item intra-group relative concentrations \eqn{e_i^q}
+   \item inter-group relative concentrations \eqn{e^q}
+   \item total relative concentrations \eqn{e_i} (same as \code{gr.e.time} in \code{graoh.simul.by.time.by.sim})
+   \item absolute concentrations for a group \eqn{E^q}
+   \item absolute concentrations \eqn{E_i} (same as \code{gr.E.time} in \code{graoh.simul.by.time.by.sim})
+   \item driving variable of group \eqn{\tau^q}
+}
+Lines are colored by simulations. 
+
+
 \bold{Graphical parameters}
 
 To modify line width, input both \code{lwd} and \code{lwd.eq}.
 Input \code{lwd} without input \code{lwd.eq} modifies only equilibrium line width, and not all line width.
+
+\emph{Envelope curve}
+
+The envelope curve is the projection of competition dome in graph of flux J depending on concentrations (\code{gr.J.E=TRUE} and \code{gr.J.e=TRUE}).
+This curve is available only if there is competition, if the total concentration and activities are identical between simulations, and activities are not subject yo mutations.
 
 \emph{col_RNV and lty_RNV}
 
@@ -181,8 +216,11 @@ data(data_sim_RegNeg)
 
 graph.simul.by.time.by.sim(data_sim_RegNeg,new.window=TRUE)
 graph.simul.by.time.by.enz(data_sim_RegNeg,new.window=TRUE,which.sim=c(1))
-graph.simul.others.by.sim(data_sim_RegNeg,new.window=TRUE)
+graph.simul.others.by.sim(data_sim_RegNeg,new.window=TRUE,env.curve=TRUE,gr.J.E)
 graph.simul.by.time.RNV(data_sim_RegNeg,new.window=TRUE,which.sim=c(1))
+
+data(data_sim_CRNeg_1grpNeg1sgl)
+graph.simul.group(data_sim_CRNeg_1grpNeg1sgl,gr.Eq.time=TRUE,gr.tauq.time=TRUE)
  
  
  

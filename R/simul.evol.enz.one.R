@@ -14,7 +14,8 @@
 #' In total, a simulation includes \code{pasobs*npt} time steps. By default, there is \code{125 000} time steps.
 #' 
 #' Chosen equilibrium for \code{pred_enzsim} and \code{pred_contsim} are the theoretical equilibrium for constraints \code{"SC"}, \code{"Comp"} and \code{"RegPos"}, 
-#' and the effective one for constraints \code{"RegNeg"}, \code{"CRPos"} and \code{"CRNeg"}. If there is regulation groups (\code{sum(1/B)>1}), the the theoretical equilibrium \emph{within groups} is given.
+#' and the effective one for constraints \code{"RegNeg"}, \code{"CRPos"} and \code{"CRNeg"}. 
+#' If there are regulation groups (\code{1<sum(1/B)<n}), the equilibrium is not computed, and \code{pred_} returns \code{NA}.
 #' 
 #' 
 #' 
@@ -117,17 +118,20 @@ simul.evol.enz.one <- function(E_ini_fun, kin_fun, Keq_fun, N_fun, correl_fun, b
   
   
   ## Predictions for theoretical equilibrium
-  pred_enz<-matrix(0,nrow=npt,ncol=n_fun) # for enzyme concentrations e* or tilde{e}
-  pred_cont<-matrix(0,nrow=npt,ncol=n_fun) # for response coefficients R*
+  pred_enz<-matrix(NA,nrow=npt,ncol=n_fun) # for enzyme concentrations e* or tilde{e}
+  pred_cont<-matrix(NA,nrow=npt,ncol=n_fun) # for response coefficients R*
   #First data
-  star <- predict_th(A_fun,correl_fun,B_fun)
-  pred_cont[1,] <- star$pred_r
-  if (correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
-    if (sum(1/B_fun)==1) {
+  if (sum(1/B_fun)==1|sum(1/B_fun)==n_fun) {
+    #if ALL enzymes are co-regulated or independent
+    star <- predict_th(A_fun,correl_fun,B_fun)
+    pred_cont[1,] <- star$pred_r
+    if (correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
       star <- predict_eff(E_ini_fun,B_fun,A_fun,correl_fun)
+      pred_cont[1:npt,1:n_fun] <- 0 #null response coefficient
     }
+    pred_enz[1,] <- star$pred_e
   }
-  pred_enz[1,] <- star$pred_e
+  
   
   
   
@@ -158,15 +162,16 @@ simul.evol.enz.one <- function(E_ini_fun, kin_fun, Keq_fun, N_fun, correl_fun, b
     if(l/pasobs==floor(l/pasobs)) {
       #register resident values
       resobs[l/pasobs,] <- c(next_gen$E_next,next_gen$kin_next,next_gen$Etot_next,next_gen$kintot_next,next_gen$w_next,A_next)
-      #register resident predictions
-      star <- predict_th(A_next,correl_fun,B_fun)
-      pred_cont[l/pasobs,] <- star$pred_r
-      if (correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
-        if (sum(1/B_fun)==1) {
+      #register resident predictions, when all enzymes are co-regulated of all independent
+      if (sum(1/B_fun)==1|sum(1/B_fun)==n_fun) {
+        star <- predict_th(A_next,correl_fun,B_fun)
+        pred_cont[l/pasobs,] <- star$pred_r
+        if (correl_fun=="RegNeg"|correl_fun=="CRPos"|correl_fun=="CRNeg") {
           star <- predict_eff(E_ini_fun,B_fun,A_next,correl_fun)
         }
+        pred_enz[l/pasobs,] <- star$pred_e
       }
-      pred_enz[l/pasobs,] <- star$pred_e
+      
       
       
       # Note: probably simpler but longer with rbind()...

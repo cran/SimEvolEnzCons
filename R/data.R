@@ -21,12 +21,20 @@
 #' 
 #' These simulation results are exploited in Coton et al. (2021).
 #' 
+#' \bold{New datasets when there are regulation groups}
+#' 
+#' \code{"data_sim_CRNeg_1grpNeg1sgl"} contains simulation results when there are one negative group and one singleton with competition.
+#' 
+#' \code{"data_sim_RegNeg_1grpNeg1grpPos"} contains simulation results when there are one negative and one positive groups, without competition.
+#' 
 #' @usage data("data_sim_SC")
 #' @usage data("data_sim_Comp")
 #' @usage data("data_sim_RegPos")
 #' @usage data("data_sim_RegNeg")
 #' @usage data("data_sim_CRPos")
 #' @usage data("data_sim_CRNeg")
+#' @usage data("data_sim_CRNeg_1grpNeg1sgl")
+#' @usage data("data_sim_RegNeg_1grpNeg1grpPos")
 #' 
 #'
 #' @format Each dataset is a list containing six elements:
@@ -68,9 +76,14 @@
 #' @aliases data_sim_RegNeg
 #' @aliases data_sim_CRPos
 #' @aliases data_sim_CRNeg
+#' @aliases data_sim_CRNeg_1grpNeg1sgl
+#' @aliases data_sim_RegNeg_1grpNeg1grpPos
 "data_sim_SC"
 "data_sim_Comp"
 "data_sim_RegPos"
 "data_sim_RegNeg"
 "data_sim_CRPos"
 "data_sim_CRNeg"
+"data_sim_CRNeg_1grpNeg1sgl"
+"data_sim_RegNeg_1grpNeg1grpPos"
+

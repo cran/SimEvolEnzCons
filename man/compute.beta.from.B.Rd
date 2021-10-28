@@ -4,10 +4,12 @@
 \alias{compute.beta.from.B}
 \title{Co-regulation coefficient computation}
 \usage{
-compute.beta.from.B(B_fun)
+compute.beta.from.B(B_fun,L_Phi_fun=NULL)
 }
 \arguments{
 \item{B_fun}{Numeric vector of global co-regulation coefficients}
+
+\item{L_Phi_fun}{List of regulation groups. Default is \code{NULL}.}
 }
 \value{
 Numeric matrix \code{n*n} of the co-regulation coefficients, where \code{n} is the length of \code{B_fun}.
@@ -18,7 +20,13 @@ If \code{beta_fun} is \code{NULL}, \code{compute.beta.from.B} returns \code{NULL
 Computes the matrix of co-regulation coefficients \eqn{M_\beta} from a vector of global co-regulation coefficients \code{B}
 }
 \details{
-Enzymes are supposed to be all co-regulated, i.e. no \eqn{\beta} value is null.
+Default value \code{L_Phi_fun = NULL} is appropriate only if enzymes are supposed to be all co-regulated, i.e. no \eqn{\beta} value is null.
+Return the same result as as a list of one element such as \code{L_Phi_fun = list(1:n)}, where \eqn{n} is the number of enzymes, which is also the length of \code{B_fun}.
+
+\code{L_Phi_fun} must be a list of \eqn{p} elements (the number of regulation groups) containing numbers between 1 and \code{n} (number of enzymes), where each list element contains the numbers of the enzyme in the group.
+Each enzyme only occurs in one group.
+See function \code{\link{class_group}} to have an idea of \code{L_Phi_fun} structure.
+For \code{compute.beta.from.B}, independent enzymes can be not contained in \code{L_Phi_fun}, and thus, \code{L_Phi_fun} may be smaller than \code{B_fun}.
 }
 \examples{
 B <- 1/c(0.5,0.2,0.3)
@@ -28,8 +36,21 @@ is.B.accurate(B,3,correl)
 
 beta <- compute.beta.from.B(B)
 
+#Seven enzymes and three groups
+n <- 7
+p <- 3
+B <- c(1.1824,  3.695, -8.593023,  1.3, 13,  6.5, 1)
+L_Phi <- list(1:3) #firt three enzymes in first group
+L_Phi[[2]] <- 4:6
+L_Phi[[3]] <- 7 #last enzyme independent
+
+beta <- compute.beta.from.B(B,L_Phi)
+
+
 
 }
 \seealso{
 Use function \code{\link{is.B.accurate}} to verify \code{B_fun} conformity.
+
+See function \code{\link{class_group}} to know format of \code{L_Phi_fun}.
 }

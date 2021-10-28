@@ -9,6 +9,7 @@
 #' 
 #' RNV size is computed at equilibrium with function \code{\link{RNV.for.simul}}. Only "near" RNV (small mutations) is used.
 #' 
+#' \bold{WARNING!} This function is not adapted or regulation groups (\code{1<sum(1/B)<n}).
 #' 
 #' \bold{Factors governing ranking order of RNV}
 #' 

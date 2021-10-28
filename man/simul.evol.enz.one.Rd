@@ -81,7 +81,8 @@ There is \code{npt} observations, so result matrix has \code{npt} rows.
 In total, a simulation includes \code{pasobs*npt} time steps. By default, there is \code{125 000} time steps.
 
 Chosen equilibrium for \code{pred_enzsim} and \code{pred_contsim} are the theoretical equilibrium for constraints \code{"SC"}, \code{"Comp"} and \code{"RegPos"}, 
-and the effective one for constraints \code{"RegNeg"}, \code{"CRPos"} and \code{"CRNeg"}. If there is regulation groups (\code{sum(1/B)>1}), the the theoretical equilibrium \emph{within groups} is given.
+and the effective one for constraints \code{"RegNeg"}, \code{"CRPos"} and \code{"CRNeg"}. 
+If there are regulation groups (\code{1<sum(1/B)<n}), the equilibrium is not computed, and \code{pred_} returns \code{NA}.
 }
 \seealso{
 See function \code{\link{simul.next.resident}} to see how works each time steps. 

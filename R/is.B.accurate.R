@@ -10,7 +10,7 @@
 #'    \item Is there regulation? If yes, \code{B_fun} is necessary.
 #'    \item Do \code{B_fun} have a correct length? Compare \code{length(B_fun)} and number of enzymes \code{n_fun}. If difference, stops.
 #'    \item Is there negative regulation in \code{correl_fun}? If yes, does \code{B_fun} include a negative regulation?  If difference, stops.
-#'    \item Sum of \code{1/B_fun} need to be equal to 1.
+#'    \item Sum of \code{1/B_fun} need to be equal an integer, which is the number of regulation groups.
 #'    }
 #' 
 #' 
@@ -43,6 +43,9 @@
 
 
 is.B.accurate <- function(B_fun, n_fun, correl_fun) {
+  
+  #verif if available correlation
+  is.correl.authorized(correl_fun)
   
   #value of B in these cases is not important but normally equal to 1 for all enzyme
   # this writing avoid multiple test

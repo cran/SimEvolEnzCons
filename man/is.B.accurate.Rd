@@ -26,7 +26,7 @@ Different tests are performed on parameter \code{B_fun} to verify its accuracy.
    \item Is there regulation? If yes, \code{B_fun} is necessary.
    \item Do \code{B_fun} have a correct length? Compare \code{length(B_fun)} and number of enzymes \code{n_fun}. If difference, stops.
    \item Is there negative regulation in \code{correl_fun}? If yes, does \code{B_fun} include a negative regulation?  If difference, stops.
-   \item Sum of \code{1/B_fun} need to be equal to 1.
+   \item Sum of \code{1/B_fun} need to be equal an integer, which is the number of regulation groups.
    }
 }
 \examples{

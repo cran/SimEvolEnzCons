@@ -36,6 +36,8 @@ Effective equilibrium is found by searching the zero for response coefficients.
 The R function uses in this objective is \code{\link[stats]{uniroot}}.
 
 Note that sum of \code{1/B_fun} need to be equal to 1.
+
+When there are regulation groups, preferably use \code{\link{predict_grp}}.
 }
 \section{Special results}{
 
@@ -71,4 +73,6 @@ Use function \code{\link{activities}} to compute enzyme activities.
 Use function \code{\link{is.correl.authorized}} to see allowed constraints for \code{correl_fun}.
 
 Use function \code{\link{predict_th}} to compute theoretical equilibrium.
+
+Use function \code{\link{predict_grp}} to predict equilibria when there are co-regulation groups.
 }

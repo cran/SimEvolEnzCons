@@ -11,6 +11,9 @@ in accordance to the theoretical background developed in Coton \emph{et al.} (20
 
 The functions are divided in five sections. Succinct definitions are given below.
 There is also a section about the correct use of recurrent function parameters.
+
+In version 2.0.0 and more, some functions have been added or modified to take account of regulation groups.
+Most important modifications are listed in section \emph{Regulation groups}.
 }
 \section{Informations about recurrent parameters}{
 
@@ -132,6 +135,30 @@ The RNV size is the absolute value of \eqn{\delta_i^sup} minus \eqn{\delta_i^inf
 If there is no superior bounds but there is two RNVs, RNV size is obtained by the difference of the two \eqn{\delta_i^inf}.
 }
 
+\section{Regulation groups}{
+
+In version 2.0.0 and more, some functions have been added or modified to take account of regulation groups.
+Most important new functions are listed below, with function section in parenthesis:
+
+\itemize{
+   \item \code{\link{class_group}} (basic): classifies enzymes in regulation groups from the co-regulation matrix
+   \item \code{\link{group_types}} (basic): gives types of regulation groups, aka negative group, positive group or singleton, from co-regulation matrix
+   \item \code{\link{predict_grp}} (equilibrium): computes equilibrium for the different relative concentrations when there are regulation groups
+   \item \code{\link{apparent.activities.Aq}} (equilibrium): computes apparent activities at equilibrium for regulation groups
+   \item \code{\link{graph.simul.group}} (graphics): gives graphics of the different kind of relative enzyme concentrations through time when there are regulation groups
+   \item \code{\link{extract.tabEtot}} (simulation): extracts table of enzyme concentration from simulation results and computes sum of concentrations in a group. Useful to compute the different kind of relative concentrations.
+}
+
+Other graphics function have been modified to take account of equilibrium for regulation groups.
+
+Two new datasets have been added, to have examples when there are regulation groups.
+
+However, \code{\link{RNV.size.at.equilibr}} and \code{\link{RNV.ranking.order.factor}} have not been modified, as we cannot determine the relative RNV at equilibrium where there are regulation groups.
+Moreover, simulations \code{\link{simul.evol.enz.one}} do not compute equilibrium when there are regulation groups.
+}
+
 \references{
 Coton, C., Talbot, G., Le Louarn, M., Dillmann, C., de Vienne, D., 2021. Evolution of enzyme levels in metabolic pathways: A theoretical approach. bioRxiv 2021.05.04.442631. https://doi.org/10.1101/2021.05.04.442631
+
+Version 2: Coton, C., Dillmann, C., de Vienne, D., 2021. Evolution of enzyme levels in metabolic pathways: A theoretical approach. Part 2.
 }

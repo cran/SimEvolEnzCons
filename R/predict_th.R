@@ -7,7 +7,7 @@
 #' Gives values at theoretical equilibrium for relative concentrations and response coefficients.
 #' This equilibrium corresponds to null derivative for relative concentrations, without conditions on flux.
 #' 
-#' 
+#' When there are regulation groups, preferably use \code{\link{predict_grp}}.
 #' 
 #' 
 #' @usage predict_th(A_fun,correl_fun,B_fun=NULL)
@@ -37,6 +37,8 @@
 #' Use function \code{\link{activities}} to compute enzyme activities.
 #' 
 #' Use function \code{\link{is.correl.authorized}} to see allowed constraints for \code{correl_fun}.
+#' 
+#' Use function \code{\link{predict_grp}} to predict equilibria when there are regulation groups.
 #'
 #' @examples
 #' #### For independancy "SC" or competition "Comp"

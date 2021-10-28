@@ -9,6 +9,8 @@
 \alias{data_sim_RegNeg}
 \alias{data_sim_CRPos}
 \alias{data_sim_CRNeg}
+\alias{data_sim_CRNeg_1grpNeg1sgl}
+\alias{data_sim_RegNeg_1grpNeg1grpPos}
 \title{Simulation results for each constraint}
 \format{
 Each dataset is a list containing six elements:
@@ -53,6 +55,10 @@ data("data_sim_RegNeg")
 data("data_sim_CRPos")
 
 data("data_sim_CRNeg")
+
+data("data_sim_CRNeg_1grpNeg1sgl")
+
+data("data_sim_RegNeg_1grpNeg1grpPos")
 }
 \description{
 Six different datasets containing the simulation results for each constraint.
@@ -75,6 +81,12 @@ Simulations differ by the initial concentrations (manually chosen), but initial 
 Chosen equilibrium for \code{tabP_e} and \code{tabP_r} are the theoretical equilibrium for constraints \code{"SC"}, \code{"Comp"} and \code{"RegPos"}, and the effective one for constraints \code{"RegNeg"}, \code{"CRPos"} and \code{"CRNeg"}.
 
 These simulation results are exploited in Coton et al. (2021).
+
+\bold{New datasets when there are regulation groups}
+
+\code{"data_sim_CRNeg_1grpNeg1sgl"} contains simulation results when there are one negative group and one singleton with competition.
+
+\code{"data_sim_RegNeg_1grpNeg1grpPos"} contains simulation results when there are one negative and one positive groups, without competition.
 }
 \references{
 Coton at al. (2021)
